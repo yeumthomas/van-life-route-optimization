@@ -5,6 +5,69 @@ import random
 
 maps = googlemaps.Client(key=config.API_KEY)
 
+trip_waypoints = [
+    # TEXAS
+    "Mary's, 3853 N St Mary's St, San Antonio, TX 78212",  # San Antonio Japanese Tea Garden
+    "Austin, TX 78712",  # UT Austin
+    "1311 S 5th St, Waco, TX 76706",  # Baylor Uni
+    "800 W Campbell Rd, Richardson, TX 75080",  # UTD
+    "Katy, TX", # Katy
+
+    # OKLAHOMA
+    "Davis, OK 73030",  # Turner Falls
+
+    # KANSAS,
+    "Wichita, KA",
+
+    # COLORADO
+    "1805 N 30th St, Colorado Springs, CO 80904", # Garden of the Gods
+    "Mesa Verde, CO",
+
+    # NEBRASKA
+    "Unnamed Road, Gering, NE 69341",  # Scotts Bluff National Monument (oregon trail stuff)
+
+    # SOUTH DAKOTA
+    "13000 SD-244, Keystone, SD 57751",  # Mt. Rushmore
+
+    # NORTH DAKOTA
+    "203 14th St W, Dickinson, ND 58601",  # Pho bc there's nothing else to do in this state
+
+    # WYOMING
+    "Yellowstone National Park, WY 82190",  # Old Faithful
+    "Cheyenne, WY",
+
+    # WASHINGTON
+    "16272 Cleveland St, Redmond, WA 98052",  # Redmond, near Mt. Rainier National Park
+
+    # IDAHO
+    "Idaho Falls, ID",
+
+    # OREGON
+    "Oregon 97604",  # Crater Lake
+
+    # UTAH
+    "Corinne, UT 84307",  # Pink Lake
+
+    # NEVADA
+    "120 NV-28, Crystal Bay, NV 89402",  # Lake Tahoe
+    "3900 S Las Vegas Blvd, Las Vegas, NV 89119",  # Las Vegas
+
+    # NORTHERN CALIFORNIA
+    "Bay Area, CA",  # Bay Area
+    "Yosemite Village, CA 95389",  # Yosemite
+    "Sacramento, CA",  # Sacramento
+    "San Jose",
+
+    # SOUTHERN CALIFORNIA
+    "909 W Valencia Dr #2106, Fullerton, CA 92832",  # Fullerton
+
+    # ARIZONA
+    "Grand Canyon Village, AZ 86023",  # Grand Canyon
+
+    # NEW MEXICO
+    "albuquerque, NM 87413"  # Bisti/De-Na-Zin Wildernes
+]
+
 def get_distances_times(waypoints):
     """
     Finds distances and the duration of travel by car bt each 2 locations
@@ -18,13 +81,13 @@ def get_distances_times(waypoints):
     for (waypoint1, waypoint2) in combinations(waypoints, 2):
         try:
             routes = maps.distance_matrix(origins=[waypoint1],
-                                                destinations=[waypoint2],
-                                                mode="driving",
-                                                language="English",
-                                                units="metric")
+                                          destinations=[waypoint2],
+                                          mode="driving",
+                                          language="English",
+                                          units="metric")
 
             distance = routes["rows"][0]["elements"][0]["distance"]["value"]
-            duration = routes["rows"][0]["elements"][0]["duration"]["value"] # in seconds
+            duration = routes["rows"][0]["elements"][0]["duration"]["value"]  # in seconds
 
             distances[frozenset([waypoint1, waypoint2])] = distance
             times[frozenset([waypoint1, waypoint2])] = duration
@@ -36,13 +99,14 @@ def get_distances_times(waypoints):
     print("FINISHED CALCULATING ALL DISTANCES AND TIMES")
     return distances, times, all_waypoints
 
+
 def calculate_fitness(path, distances):
     """
     Gets the fitness of a current solution.
     :param path: lst of waypoints in order of path
     :return: single value of fitness
     """
-    fitness = 0
+    fitness = 0.0
 
     for ind, location in enumerate(path):
         waypoint1 = path[ind - 1]
@@ -51,25 +115,17 @@ def calculate_fitness(path, distances):
 
     return fitness
 
-def create_random_path(all_waypoints, part):
+
+def create_random_path():
     """
     Creates a random path for road trip.
     :param all_waypoints: set of all waypoints
     :return: random path
     """
-    if part == "first":
-        start = "Katy, TX 77450"
-        mid = "16272 Cleveland St, Redmond, WA 98052"
-    else:
-        mid = "Katy, TX 77450"
-        start = "16272 Cleveland St, Redmond, WA 98052"
-    random_path = list(all_waypoints)
-    random_path.remove("Katy, TX 77450")
-    random_path.remove("16272 Cleveland St, Redmond, WA 98052")
+    random_path = list(trip_waypoints)
     random.shuffle(random_path)
-    random_path.insert(0, start)
-    random_path.append(mid)
     return tuple(random_path)
+
 
 def mutate_path(path_genome, max_mutations=2):
     """
@@ -82,17 +138,16 @@ def mutate_path(path_genome, max_mutations=2):
     total_mutations = random.randint(1, max_mutations)
 
     for mutation in range(total_mutations):
-        swap_ind1, swap_ind2 = 0, 0
+        swap_ind1 = random.randint(0, len(path_genome) - 1)
+        swap_ind2 = swap_ind1
+
         while swap_ind1 == swap_ind2:
-            swap_ind1 = random.randint(1, len(path_genome) - 1)
-            swap_ind2 = random.randint(1, len(path_genome) - 1)
+            swap_ind2 = random.randint(0, len(path_genome) - 1)
 
-        temp1 = path_genome[swap_ind1]
-        temp2 = path_genome[swap_ind2]
-        path_genome[swap_ind1] = temp2
-        path_genome[swap_ind2] = temp1
+        path_genome[swap_ind1], path_genome[swap_ind2] = path_genome[swap_ind2], path_genome[swap_ind1]
 
-    return path_genome
+    return tuple(path_genome)
+
 
 def shuffle_mutation(path_genome):
     """
@@ -102,7 +157,7 @@ def shuffle_mutation(path_genome):
     """
     path_genome = list(path_genome)
 
-    ind_beginning_of_swap = random.randint(1, len(path_genome) - 1)
+    ind_beginning_of_swap = random.randint(0, len(path_genome) - 1)
     length = random.randint(2, 15)
     clipped_genome = path_genome[ind_beginning_of_swap: ind_beginning_of_swap + length]
     path_genome = path_genome[:ind_beginning_of_swap] + path_genome[ind_beginning_of_swap + length:]
@@ -110,7 +165,8 @@ def shuffle_mutation(path_genome):
 
     return tuple(path_genome[:insert_ind] + clipped_genome + path_genome[insert_ind:])
 
-def generate_rando_pop(pop_size, all_waypoints, part):
+
+def generate_rando_pop(pop_size, all_waypoints):
     """
     creates pop_size number of random paths
     :param pop_size: number of paths
@@ -119,16 +175,18 @@ def generate_rando_pop(pop_size, all_waypoints, part):
     """
     random_pop = []
     for ind in range(pop_size):
-        random_pop.append(create_random_path(all_waypoints, part))
+        random_pop.append(create_random_path())
     return random_pop
 
-def run(waypoints, part, generations=5000, population_size=100):
+
+def run(waypoints, generations=5000, population_size=100):
     """
     runs the entire script
     :param generations: total generations/iterations of script
     :param population_size: number of paths
     :return: optimal path
     """
+    current_best_distance = -1
     population_subset_size = int(population_size / 10.)
     generations_tenth = int(generations / 10.)
 
@@ -137,7 +195,7 @@ def run(waypoints, part, generations=5000, population_size=100):
 
     print(all_waypoints)
     # initial population
-    population = generate_rando_pop(population_size, all_waypoints, part)
+    population = generate_rando_pop(population_size, waypoints)
 
     for generation in range(generations):
 
@@ -145,9 +203,9 @@ def run(waypoints, part, generations=5000, population_size=100):
         pop_fitness = {}
 
         for path_genome in population:
-            if path_genome in pop_fitness.items():
+            if path_genome in pop_fitness:
                 continue
-            pop_fitness[tuple(path_genome)] = calculate_fitness(path_genome, distances)
+            pop_fitness[path_genome] = calculate_fitness(path_genome, distances)
 
         # get 10% best
         new_population = []
@@ -159,6 +217,12 @@ def run(waypoints, part, generations=5000, population_size=100):
                                                                        len(pop_fitness)))
                 print(path_genome)
                 print("")
+
+                if pop_fitness[path_genome] < current_best_distance or current_best_distance < 0:
+                    print("THIS IS THE BEST PATH YET: ")
+                    print(path_genome)
+                    print("DISTANCE OF: ", pop_fitness[path_genome])
+                    print(" ")
 
             new_population.append(path_genome)
 
@@ -178,86 +242,5 @@ def run(waypoints, part, generations=5000, population_size=100):
 
     return population[0]
 
-waypoints_part_1 = [
-
-    # HOME
-    "Katy, TX 77450",
-    
-    # TEXAS
-    "Mary's, 3853 N St Mary's St, San Antonio, TX 78212",    # San Antonio Japanese Tea Garden
-    "Austin, TX 78712",  # UT Austin
-    "1311 S 5th St, Waco, TX 76706",     # Baylor Uni
-    "800 W Campbell Rd, Richardson, TX 75080",   # UTD
-    
-    # COLORADO
-    "Great Sand Dunes National Park and Preserve, CO",
-    "9482 Crystal Ln, Longmont, CO 80503",  # Next to Crystal Lake
-
-    # OKLAHOMA
-    "301 W Reno Ave, Oklahoma City, OK 73102",   # Myriad Botanical Gardens
-
-    # NEBRASKA
-    "Unnamed Road, Gering, NE 69341",  # Scotts Bluff National Monument (oregon trail stuff)
-
-    # WYOMING
-    "Yellowstone National Park, WY 82190",  # Old Faithful
-
-    # MONTANA
-    "Montana 59417",  # Glacier National Park
-
-    # SOUTH DAKOTA
-    "13000 SD-244, Keystone, SD 57751",  # Mt. Rushmore
-
-    # NORTH DAKOTA
-    "203 14th St W, Dickinson, ND 58601",  # Pho bc there's nothing else to do in this state
-
-    # WASHINGTON
-    "16272 Cleveland St, Redmond, WA 98052",  # Redmond, near Mt. Rainier National Park
-]
-
-waypoints_part_2 = [
-
-    # WASHINGTON
-    "16272 Cleveland St, Redmond, WA 98052",  # Redmond, near Mt. Rainier National Park
-
-    # IDAHO
-    "4155 Shoshone Falls Grade, Twin Falls, ID 83301",  # Shoshone Waterfall UNUSED
-
-    # OREGON
-    "Oregon 97604", # Crater Lake
-
-    # UTAH
-    "Bonneville Speedway Road, Wendover, UT 84083",  # Salt Flats
-    "Corinne, UT 84307",  # Pink Lake
-
-    # NEVADA
-    "120 NV-28, Crystal Bay, NV 89402", # Lake Tahoe
-    "3900 S Las Vegas Blvd, Las Vegas, NV 89119", # Las Vegas
-
-    # NORTHERN CALIFORNIA
-    "Golden Gate Bridge, San Francisco, CA", # Bay Area
-    "Yosemite Village, CA 95389", # Yosemite
-    "Berkeley, CA" # UC Berkeley
-    "Sacramento, CA", # Sacramento
-
-    # SOUTHERN CALIFORNIA
-    "909 W Valencia Dr #2106, Fullerton, CA 92832", # Fullerton
-
-    # ARIZONA
-    "Grand Canyon Village, AZ 86023", # Grand Canyon
-
-    # NEW MEXICO
-    "County Road 7297, Bloomfield, NM 87413" # Bisti/De-Na-Zin Wilderness
-    
-    # TEXAS
-    "Austin, TX 78712",  # UT Austin
-
-    # HOME
-    "Katy, TX 77450"
-]
-
-print("RUNNING PART 1")
-run(waypoints_part_1, "first")
-
-# print("RUNNING PART 2")
-# run(waypoints_part_2, "second")
+print("RUNNING AI")
+run(trip_waypoints)
